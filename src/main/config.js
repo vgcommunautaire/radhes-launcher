@@ -1,8 +1,10 @@
-// Réglages du launcher. Le seul champ à remplir obligatoirement est AZURE_CLIENT_ID.
-// Le dépôt GitHub (propriétaire/nom) est lu dans package.json > build.publish.
+// Réglages du launcher.
 const pkg = require('../../package.json');
 
-const repo = pkg.build.publish[0];
+// Dépôt GitHub : mêmes valeurs que package.json > build.publish
+// (cette partie de package.json est retirée de l'application installée, d'où la copie ici).
+const GITHUB_OWNER = 'vgcommunautaire';
+const GITHUB_REPO = 'radhes-launcher';
 
 module.exports = {
   // Identifiant client (Application ID) de l'application Azure.
@@ -10,7 +12,7 @@ module.exports = {
 
   // Emplacement du manifest des mods, publié par scripts/publish.js.
   // Remplace cette URL si tu héberges le manifest ailleurs (dossier synchronisé, site web...).
-  MANIFEST_URL: `https://github.com/${repo.owner}/${repo.repo}/releases/download/mods/manifest.json`,
+  MANIFEST_URL: `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/releases/download/mods/manifest.json`,
 
   // Dossier du jeu, dans %APPDATA%. Séparé du .minecraft officiel.
   GAME_DIR_NAME: '.radhes-launcher',
