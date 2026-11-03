@@ -3,14 +3,26 @@ const api = window.launcher;
 
 let state = { account: null, playing: false, working: false };
 
+const HEART_COUNT = 10;
+
+function buildHearts() {
+  const box = $('hearts');
+  for (let i = 0; i < HEART_COUNT; i++) {
+    box.insertAdjacentHTML('beforeend',
+      `<svg class="heart" viewBox="0 0 9 8" style="--i:${i}"><use href="#heart" class="empty"/><use href="#heart" class="fill"/><use href="#heart-shine" class="shine"/></svg>`);
+  }
+}
+
 function render() {
   const { account, playing, working } = state;
+  $('account-box').hidden = !account;
   $('account-name').textContent = account ? account.name : '';
+  $('avatar').textContent = account ? account.name.charAt(0).toUpperCase() : '';
   $('logout').hidden = !account || working || playing;
   $('login').hidden = !!account;
   $('play').hidden = !account;
   $('play').disabled = working || playing;
-  $('play').textContent = playing ? 'En jeu' : 'Jouer';
+  $('play').textContent = playing ? 'EN JEU' : 'JOUER';
   $('login').disabled = working;
   $('verify').disabled = working || playing || !account;
   $('progress').hidden = !working;
@@ -27,9 +39,59 @@ function setStatus(text) {
 
 function setProgress({ label, percent }) {
   $('progress-label').textContent = label + (percent != null ? ` ${Math.floor(percent)} %` : '');
-  const fill = $('bar-fill');
-  fill.classList.toggle('indeterminate', percent == null);
-  fill.style.width = percent == null ? '' : `${percent}%`;
+  // Chaque cœur vaut 10 % ; un demi-cœur, 5 %.
+  const box = $('hearts');
+  box.classList.toggle('waiting', percent == null);
+  const halves = percent == null ? 0 : Math.floor(percent / (50 / HEART_COUNT));
+  box.querySelectorAll('.heart').forEach((h, i) => {
+    h.classList.toggle('full', halves >= (i + 1) * 2);
+    h.classList.toggle('half', halves === i * 2 + 1);
+  });
+}
+
+// Braises qui montent dans le fond.
+function startEmbers() {
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const canvas = $('embers');
+  const ctx = canvas.getContext('2d');
+  let w = 0;
+  let h = 0;
+  const resize = () => {
+    w = canvas.width = window.innerWidth;
+    h = canvas.height = window.innerHeight;
+  };
+  resize();
+  window.addEventListener('resize', resize);
+
+  const spawn = (anywhere) => ({
+    x: Math.random() * w,
+    y: anywhere ? Math.random() * h : h + 10,
+    r: 0.6 + Math.random() * 2,
+    vy: 0.3 + Math.random() * 0.9,
+    vx: (Math.random() - 0.5) * 0.3,
+    hue: 5 + Math.random() * 30,
+    life: 0.4 + Math.random() * 0.6,
+    phase: Math.random() * Math.PI * 2,
+  });
+  const embers = Array.from({ length: 70 }, () => spawn(true));
+
+  const tick = (t) => {
+    ctx.clearRect(0, 0, w, h);
+    for (const e of embers) {
+      e.y -= e.vy;
+      e.x += e.vx + Math.sin(t / 900 + e.phase) * 0.2;
+      const alpha = Math.max(0, Math.min(1, e.y / h)) * e.life * (0.7 + 0.3 * Math.sin(t / 200 + e.phase));
+      ctx.beginPath();
+      ctx.fillStyle = `hsla(${e.hue}, 100%, 58%, ${alpha})`;
+      ctx.shadowColor = `hsla(${e.hue}, 100%, 50%, ${alpha})`;
+      ctx.shadowBlur = 8;
+      ctx.arc(e.x, e.y, e.r, 0, Math.PI * 2);
+      ctx.fill();
+      if (e.y < -10) Object.assign(e, spawn(false));
+    }
+    requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
 }
 
 function fillRamOptions(selected) {
@@ -106,6 +168,9 @@ api.on('update', (u) => {
   banner.textContent = messages[u.state] || '';
   banner.hidden = !messages[u.state];
 });
+
+buildHearts();
+startEmbers();
 
 (async () => {
   const s = await api.getState();

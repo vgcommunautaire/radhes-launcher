@@ -7,30 +7,55 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <!-- Cœur en pixels, réutilisé pour le logo et la barre de progression. -->
+  <svg width="0" height="0" class="defs" aria-hidden="true">
+    <defs>
+      <symbol id="heart" viewBox="0 0 9 8" shape-rendering="crispEdges">
+        <path d="M1 0h2v1h-2zM6 0h2v1h-2zM0 1h4v1h-4zM5 1h4v1h-4zM0 2h9v2h-9zM1 4h7v1h-7zM2 5h5v1h-5zM3 6h3v1h-3zM4 7h1v1h-1z"/>
+      </symbol>
+      <symbol id="heart-shine" viewBox="0 0 9 8" shape-rendering="crispEdges">
+        <path d="M1 1h2v1h-2zM1 2h1v1h-1z"/>
+      </symbol>
+    </defs>
+  </svg>
+
+  <canvas id="embers" aria-hidden="true"></canvas>
+  <div class="vignette" aria-hidden="true"></div>
+
   <div id="update-banner" class="banner" hidden></div>
 
   <header>
     <div class="brand">
-      <span class="logo">R</span>
-      <div>
-        <h1>Radhes Launcher</h1>
-        <span id="version" class="muted"></span>
+      <svg class="logo" viewBox="0 0 9 8" aria-hidden="true">
+        <use href="#heart" class="fill"/>
+        <use href="#heart-shine" class="shine"/>
+      </svg>
+      <div class="brand-text">
+        <h1>RADHES</h1>
+        <span class="subtitle">LAUNCHER</span>
       </div>
     </div>
-    <div id="account" class="account">
-      <span id="account-name"></span>
-      <button id="logout" class="link" hidden>Se déconnecter</button>
+    <div class="account">
+      <div id="account-box" class="account-box" hidden>
+        <span id="avatar" class="avatar"></span>
+        <div class="account-text">
+          <span id="account-name"></span>
+          <button id="logout" class="link">Se déconnecter</button>
+        </div>
+      </div>
     </div>
   </header>
 
   <main>
     <section class="hero">
-      <p class="muted">Minecraft · Fabric · mods synchronisés</p>
+      <p class="tagline">Une vie. Pour tous.</p>
+      <p class="muted">Hardcore · vie partagée · mods synchronisés</p>
+
       <button id="login" class="primary" hidden>Se connecter avec Microsoft</button>
-      <button id="play" class="primary play" hidden>Jouer</button>
+      <button id="play" class="primary play" hidden>JOUER</button>
 
       <div id="progress" class="progress" hidden>
-        <div class="bar"><div id="bar-fill"></div></div>
+        <div id="hearts" class="hearts" aria-hidden="true"></div>
         <span id="progress-label"></span>
       </div>
 
@@ -51,6 +76,8 @@
       </div>
     </details>
   </main>
+
+  <footer><span id="version"></span></footer>
 
   <script src="app.js"></script>
 </body>

@@ -26,7 +26,7 @@ function createWindow() {
     minWidth: 760,
     minHeight: 520,
     title: 'Radhes Launcher',
-    backgroundColor: '#14141c',
+    backgroundColor: '#0b0707',
     autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, '..', 'preload.js'),
