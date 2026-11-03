@@ -27,6 +27,7 @@ function createWindow() {
     minHeight: 520,
     title: 'Radhes Launcher',
     backgroundColor: '#0b0707',
+    icon: path.join(__dirname, '..', 'assets', 'icon.png'),
     autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, '..', 'preload.js'),
