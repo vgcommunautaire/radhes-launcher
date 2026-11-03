@@ -6,7 +6,7 @@ const repo = pkg.build.publish[0];
 
 module.exports = {
   // Identifiant client (Application ID) de l'application Azure.
-  AZURE_CLIENT_ID: '00000000-0000-0000-0000-000000000000',
+  AZURE_CLIENT_ID: '1611a195-ec9d-44c7-a7a3-8c65b4467ecf',
 
   // Emplacement du manifest des mods, publié par scripts/publish.js.
   // Remplace cette URL si tu héberges le manifest ailleurs (dossier synchronisé, site web...).

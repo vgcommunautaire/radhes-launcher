@@ -39,7 +39,7 @@ Ensuite, redémarre le PC.
 3. URI de redirection : plateforme **Client public/natif (mobile et bureau)**, adresse :
    `https://login.microsoftonline.com/common/oauth2/nativeclient`
 4. Copie l'**ID d'application (client)** et colle-le dans `src/main/config.js` (`AZURE_CLIENT_ID`).
-5. **Important :** les nouvelles applications doivent être autorisées par Mojang avant de pouvoir se connecter à Minecraft. Remplis le formulaire de demande d'accès à l'API Minecraft (lien dans la documentation Microsoft/Minecraft : « Minecraft Services API access »). Tant que ce n'est pas validé, la connexion s'arrête avec le message « Mojang a refusé la connexion ».
+5. **Important :** les nouvelles applications doivent être autorisées par Mojang avant de pouvoir se connecter à Minecraft. Remplis le formulaire « AppID Review » : https://aka.ms/mce-reviewappid (il demande l'ID d'application **et** l'ID de l'annuaire, ou « Tenant ID », tous deux visibles sur la page de l'application Azure). Les demandes sont examinées une fois par semaine. Le nom de l'application ne doit contenir ni « Minecraft », ni « Mojang », ni « Microsoft », ni « Xbox ». Tant que ce n'est pas validé, la connexion s'arrête avec le message « Mojang a refusé la connexion ».
 
 ### 4. Installer les dépendances
 Dans le dossier du projet :
