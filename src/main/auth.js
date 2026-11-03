@@ -93,6 +93,10 @@ function askAuthorizationCode(parent) {
       event.preventDefault();
       const params = new URL(target).searchParams;
       const error = params.get('error');
+      if (error) {
+        const details = Object.fromEntries([...params].filter(([k]) => k !== 'code' && k !== 'state'));
+        log.warn('Connexion Microsoft refusée :', details);
+      }
       if (error === 'access_denied') return finish(reject, new UserError('Connexion annulée.'));
       if (error) return finish(reject, new UserError(`Microsoft a refusé la connexion : ${params.get('error_description') || error}`));
       if (params.get('state') !== state) return finish(reject, new UserError('Réponse de connexion invalide, réessaie.'));
