@@ -1,0 +1,49 @@
+{
+  "name": "radhes-launcher",
+  "productName": "Radhes Launcher",
+  "version": "1.0.0",
+  "description": "Launcher Minecraft privé (Fabric + mods synchronisés)",
+  "main": "src/main/main.js",
+  "private": true,
+  "scripts": {
+    "postinstall": "node scripts/fix-electron.js",
+    "start": "electron .",
+    "dist": "electron-builder --win",
+    "release": "electron-builder --win --publish always",
+    "publish-mods": "node scripts/publish.js"
+  },
+  "dependencies": {
+    "electron-updater": "^6.6.2"
+  },
+  "devDependencies": {
+    "electron": "^38.2.0",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "fr.radhes.launcher",
+    "productName": "Radhes Launcher",
+    "files": [
+      "src/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": "nsis"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "vgcommunautaire",
+        "repo": "radhes-launcher",
+        "releaseType": "release"
+      }
+    ]
+  },
+  "allowScripts": {
+    "electron@38.8.6": true,
+    "electron-winstaller@5.4.0": true
+  }
+}

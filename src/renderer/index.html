@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:">
+  <title>Radhes Launcher</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="update-banner" class="banner" hidden></div>
+
+  <header>
+    <div class="brand">
+      <span class="logo">R</span>
+      <div>
+        <h1>Radhes Launcher</h1>
+        <span id="version" class="muted"></span>
+      </div>
+    </div>
+    <div id="account" class="account">
+      <span id="account-name"></span>
+      <button id="logout" class="link" hidden>Se déconnecter</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <p class="muted">Minecraft · Fabric · mods synchronisés</p>
+      <button id="login" class="primary" hidden>Se connecter avec Microsoft</button>
+      <button id="play" class="primary play" hidden>Jouer</button>
+
+      <div id="progress" class="progress" hidden>
+        <div class="bar"><div id="bar-fill"></div></div>
+        <span id="progress-label"></span>
+      </div>
+
+      <p id="status" class="status"></p>
+      <p id="error" class="error" role="alert" hidden></p>
+    </section>
+
+    <details class="settings">
+      <summary>Réglages</summary>
+      <label>
+        Mémoire allouée au jeu
+        <select id="ram"></select>
+      </label>
+      <div class="row">
+        <button id="verify" class="secondary">Vérifier et réparer les fichiers</button>
+        <button id="open-game" class="secondary">Ouvrir le dossier du jeu</button>
+        <button id="open-logs" class="secondary">Ouvrir les journaux</button>
+      </div>
+    </details>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

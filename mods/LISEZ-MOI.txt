@@ -1,0 +1,3 @@
+Mets ici les fichiers .jar des mods (ton mod de vie partagée + les autres).
+Ensuite, lance : npm run publish-mods
+Tous les joueurs recevront la nouvelle liste au prochain lancement.
