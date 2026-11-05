@@ -1,0 +1,3 @@
+﻿Mets ici les packs de textures (.zip) imposes a tout le monde.
+Leur ordre (du haut vers le bas, comme dans le jeu) se regle dans modpack.json (resourcePacks).
+Ensuite, double-clique sur "Publier les mods".

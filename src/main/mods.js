@@ -23,6 +23,8 @@ function validateManifest(m) {
   validateEntries(m.mods, '.jar');
   m.shaderpacks = Array.isArray(m.shaderpacks) ? m.shaderpacks : [];
   validateEntries(m.shaderpacks, '.zip');
+  m.resourcepacks = Array.isArray(m.resourcepacks) ? m.resourcepacks : [];
+  validateEntries(m.resourcepacks, '.zip');
   if (m.defaultShader && !m.shaderpacks.some((s) => s.file === m.defaultShader)) {
     throw new UserError('Le manifest est invalide : le shader par défaut ne fait pas partie de la liste.');
   }
@@ -65,31 +67,73 @@ async function syncMods({ root, manifest, onProgress = () => {}, log }) {
   log?.info(`Mods à jour (${manifest.mods.length} au total, ${count} téléchargé(s)).`);
 }
 
-// Shaders : le launcher télécharge ceux de la liste sans toucher aux shaders ajoutés par le joueur.
-// Il retient ceux qu'il a installés lui-même pour pouvoir les retirer s'ils quittent la liste.
-async function syncShaders({ root, manifest, onProgress = () => {}, log }) {
-  const dir = path.join(root, 'shaderpacks');
+// Télécharge une liste de fichiers dans un dossier partagé avec le joueur (shaders, packs de textures)
+// sans toucher à ses fichiers à lui. Le launcher retient ceux qu'il a installés pour pouvoir
+// les retirer quand ils quittent la liste.
+async function syncFolder({ dir, entries, label, onProgress, log }) {
   const managedFile = path.join(dir, '.radhes-launcher.json');
   await fsp.mkdir(dir, { recursive: true });
 
   let managed = [];
   try { managed = JSON.parse(await fsp.readFile(managedFile, 'utf8')); } catch {}
-  const wanted = new Set(manifest.shaderpacks.map((s) => s.file));
+  const wanted = new Set(entries.map((s) => s.file));
   for (const file of managed) {
     if (!wanted.has(file) && file === path.basename(file)) {
-      log?.info(`Suppression du shader retiré de la liste : ${file}`);
+      log?.info(`Suppression de ${path.basename(dir)}/${file} (retiré de la liste)`);
       await fsp.rm(path.join(dir, file), { force: true });
     }
   }
 
-  const tasks = manifest.shaderpacks.map((s) => ({ url: s.url, dest: path.join(dir, s.file), sha256: s.sha256, alwaysHash: true }));
+  const tasks = entries.map((s) => ({ url: s.url, dest: path.join(dir, s.file), sha256: s.sha256, alwaysHash: true }));
   await dl.downloadAll(tasks, {
-    concurrency: 2,
-    onProgress: ({ done, total }) => onProgress({ label: 'Téléchargement des shaders...', percent: (done / total) * 100 }),
+    concurrency: 3,
+    onProgress: ({ done, total }) => onProgress({ label, percent: (done / total) * 100 }),
   });
   await fsp.writeFile(managedFile, JSON.stringify([...wanted]));
+}
 
+async function syncShaders({ root, manifest, onProgress = () => {}, log }) {
+  await syncFolder({ dir: path.join(root, 'shaderpacks'), entries: manifest.shaderpacks, label: 'Téléchargement des shaders...', onProgress, log });
   if (manifest.defaultShader) await applyDefaultShader(root, manifest.defaultShader, log);
+}
+
+async function syncResourcePacks({ root, manifest, onProgress = () => {}, log }) {
+  await syncFolder({ dir: path.join(root, 'resourcepacks'), entries: manifest.resourcepacks, label: 'Téléchargement des packs de textures...', onProgress, log });
+  await enforceResourcePacks(root, manifest.resourcepacks.map((p) => p.file), log);
+}
+
+// Impose les packs de textures officiels, dans l'ordre, à chaque lancement (options.txt du jeu).
+// Les packs ajoutés par le joueur sont désactivés, pas supprimés. Les packs intégrés au jeu et aux mods
+// (vanilla, fabric...) sont gardés ; les packs optionnels de Minecraft (programmer_art, high_contrast) sont retirés.
+// `official` va du haut vers le bas (comme dans le menu du jeu) ; options.txt les liste du bas vers le haut.
+async function enforceResourcePacks(root, official, log) {
+  if (!official.length) return;
+  const file = path.join(root, 'options.txt');
+  let lines = [];
+  try { lines = (await fsp.readFile(file, 'utf8')).split(/\r?\n/); } catch {}
+
+  const readList = (key) => {
+    const line = lines.find((l) => l.startsWith(`${key}:`));
+    try { return line ? JSON.parse(line.slice(key.length + 1)) : null; } catch { return null; }
+  };
+  const writeList = (key, list) => {
+    const value = `${key}:${JSON.stringify(list)}`;
+    const i = lines.findIndex((l) => l.startsWith(`${key}:`));
+    if (i === -1) lines.push(value);
+    else lines[i] = value;
+  };
+
+  const current = readList('resourcePacks') || ['vanilla', 'fabric'];
+  const builtins = current.filter((p) => typeof p === 'string' && !p.startsWith('file/') && p !== 'programmer_art' && p !== 'high_contrast');
+  if (!builtins.includes('vanilla')) builtins.unshift('vanilla');
+  const wanted = [...builtins, ...[...official].reverse().map((f) => `file/${f}`)];
+  const incompatible = (readList('incompatibleResourcePacks') || []).filter((p) => !wanted.includes(p));
+
+  if (JSON.stringify(current) === JSON.stringify(wanted)) return;
+  writeList('resourcePacks', wanted);
+  writeList('incompatibleResourcePacks', incompatible);
+  await fsp.writeFile(file, `${lines.filter((l, i) => l || i < lines.length - 1).join('\n')}\n`);
+  log?.info(`Packs de textures imposés : ${official.join(' > ')}`);
 }
 
 // Active le shader par défaut dans Iris (config/iris.properties), une seule fois par shader :
@@ -118,4 +162,4 @@ async function applyDefaultShader(root, shader, log) {
   log?.info(`Shader par défaut activé : ${shader}`);
 }
 
-module.exports = { loadManifest, validateManifest, compareVersions, syncMods, syncShaders };
+module.exports = { loadManifest, validateManifest, compareVersions, syncMods, syncShaders, syncResourcePacks };

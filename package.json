@@ -1,7 +1,7 @@
 {
   "name": "radhes-launcher",
   "productName": "Radhes Launcher",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Launcher Minecraft privé (Fabric + mods synchronisés)",
   "main": "src/main/main.js",
   "private": true,

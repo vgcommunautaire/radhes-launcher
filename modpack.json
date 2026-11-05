@@ -1,6 +1,14 @@
 {
   "minecraftVersion": "26.3",
   "loaderVersion": "latest",
-  "launcherMinVersion": "1.0.0",
-  "defaultShader": "ComplementaryUnbound_r5.9.3.zip"
+  "launcherMinVersion": "1.0.1",
+  "defaultShader": "ComplementaryUnbound_r5.9.3.zip",
+  "resourcePacks": [
+    "FA+Player-v1.1.zip",
+    "FA-Emissive-v1.7.zip",
+    "FA-Details-v2.4.zip",
+    "FA-Spiders-v2.3.1.zip",
+    "FA-All_Extensions-v1.10.1.zip",
+    "FreshAnimations_v1.11.2_26.1.zip"
+  ]
 }

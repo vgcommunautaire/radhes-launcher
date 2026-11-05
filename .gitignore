@@ -2,3 +2,4 @@ node_modules/
 dist/
 mods/*.jar
 shaderpacks/*.zip
+resourcepacks/*.zip

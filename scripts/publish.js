@@ -1,6 +1,7 @@
 #!/usr/bin/env node
-// Publie la liste des mods : lit les dossiers mods/ et shaderpacks/, calcule les SHA-256,
-// génère manifest.json et le met en ligne. Le shader par défaut est choisi dans modpack.json (« defaultShader »).
+// Publie la liste des mods : lit les dossiers mods/, shaderpacks/ et resourcepacks/, calcule les SHA-256,
+// génère manifest.json et le met en ligne. Dans modpack.json : « defaultShader » (shader activé par défaut)
+// et « resourcePacks » (packs de textures imposés, du haut vers le bas).
 //
 //   npm run publish-mods                           → GitHub Releases (release « mods » du dépôt)
 //   npm run publish-mods -- --essai                → génère seulement dist/manifest.json, sans rien envoyer
@@ -33,6 +34,7 @@ const OUT_DIR = arg('--dossier');
 const BASE_URL = arg('--url-base');
 const MODS_DIR = path.resolve(arg('--mods') || path.join(ROOT, 'mods'));
 const SHADERS_DIR = path.join(ROOT, 'shaderpacks');
+const RESOURCEPACKS_DIR = path.join(ROOT, 'resourcepacks');
 const NO_MODRINTH = process.argv.includes('--sans-modrinth');
 
 function fail(msg) {
@@ -112,8 +114,8 @@ async function matchModrinth(mods) {
     if (!f) continue;
     mod.url = f.url;
     mod.name = titles[v.project_id] || v.name;
-    const loader = mod.kind === 'shader' ? 'iris' : 'fabric';
-    if (!v.loaders.includes(loader)) console.warn(`⚠ ${mod.file} : cette version n'est pas marquée compatible ${loader === 'iris' ? 'Iris' : 'Fabric'} sur Modrinth.`);
+    const loader = { shader: 'iris', resourcepack: 'minecraft' }[mod.kind] || 'fabric';
+    if (!v.loaders.includes(loader)) console.warn(`⚠ ${mod.file} : cette version n'est pas marquée compatible ${loader} sur Modrinth.`);
     if (!v.game_versions.includes(modpack.minecraftVersion)) {
       console.warn(`⚠ ${mod.file} : cette version n'est pas marquée compatible Minecraft ${modpack.minecraftVersion} sur Modrinth.`);
     }
@@ -189,7 +191,7 @@ async function publishGithub(manifest, items, finish) {
     }
     if (existing) await deleteAsset(existing.id);
     console.log(`  ↑ ${mod.file}`);
-    const type = mod.kind === 'shader' ? 'application/zip' : 'application/java-archive';
+    const type = mod.kind === 'mod' ? 'application/java-archive' : 'application/zip';
     const uploaded = await uploadAsset(release, mod.file, await fsp.readFile(path.join(mod.dir, mod.file)), type);
     mod.url = uploaded.browser_download_url;
   }
@@ -232,6 +234,18 @@ async function publishFolder(manifest, items, finish) {
 
 // --- Principal -------------------------------------------------------------
 
+// Range les packs selon modpack.json > resourcePacks (du haut vers le bas). Chaque pack du dossier doit y figurer.
+function orderResourcePacks(packs) {
+  const order = modpack.resourcePacks || [];
+  for (const name of order) {
+    if (!packs.some((p) => p.file === name)) fail(`Le pack « ${name} » (modpack.json) n'est pas dans le dossier resourcepacks.`);
+  }
+  for (const p of packs) {
+    if (!order.includes(p.file)) fail(`Le pack « ${p.file} » n'est pas dans la liste resourcePacks de modpack.json : ajoute-le à la place voulue.`);
+  }
+  return order.map((name) => packs.find((p) => p.file === name));
+}
+
 function toManifestEntries(items) {
   return items.map((m) => ({ name: m.name || m.file.replace(/\.(jar|zip)$/i, ''), file: m.file, url: m.url, sha256: m.sha256 }));
 }
@@ -240,8 +254,10 @@ async function main() {
   console.log(`Mods lus dans : ${MODS_DIR}`);
   const mods = await readLocalFiles(MODS_DIR, '.jar', 'mod');
   const shaders = await readLocalFiles(SHADERS_DIR, '.zip', 'shader');
+  const packs = orderResourcePacks(await readLocalFiles(RESOURCEPACKS_DIR, '.zip', 'resourcepack'));
+  const all = [...mods, ...shaders, ...packs];
   const loaderVersion = await resolveLoaderVersion();
-  await matchModrinth([...mods, ...shaders]);
+  await matchModrinth(all);
 
   const defaultShader = modpack.defaultShader || (shaders.length === 1 ? shaders[0].file : null);
   if (defaultShader && !shaders.some((s) => s.file === defaultShader)) {
@@ -255,10 +271,12 @@ async function main() {
     mods: [],
     shaderpacks: [],
     defaultShader,
+    resourcepacks: [], // du haut vers le bas, comme dans le menu du jeu
   };
   const finish = () => {
     manifest.mods = toManifestEntries(mods);
     manifest.shaderpacks = toManifestEntries(shaders);
+    manifest.resourcepacks = toManifestEntries(packs);
   };
 
   console.log(`\nMinecraft ${manifest.minecraftVersion}, Fabric ${loaderVersion}, ${mods.length} mod(s) :`);
@@ -267,18 +285,22 @@ async function main() {
     console.log(`${shaders.length} shader(s) :`);
     for (const s of shaders) console.log(`  • ${s.file}${s.url ? '  [Modrinth]' : ''}${s.file === defaultShader ? '  (activé par défaut)' : ''}`);
   }
+  if (packs.length) {
+    console.log(`${packs.length} pack(s) de textures, imposés dans cet ordre (haut → bas) :`);
+    packs.forEach((p, i) => console.log(`  ${i + 1}. ${p.file}${p.url ? '  [Modrinth]' : ''}`));
+  }
   console.log('');
 
   if (DRY_RUN) {
-    for (const m of [...mods, ...shaders]) m.url = m.url || `https://github.com/${owner}/${repo}/releases/download/${TAG}/${encodeURIComponent(m.file)}`;
+    for (const m of all) m.url = m.url || `https://github.com/${owner}/${repo}/releases/download/${TAG}/${encodeURIComponent(m.file)}`;
     finish();
     await fsp.mkdir(path.join(ROOT, 'dist'), { recursive: true });
     await fsp.writeFile(path.join(ROOT, 'dist', 'manifest.json'), JSON.stringify(manifest, null, 2));
     console.log('Mode essai : dist/manifest.json généré, rien n\'a été envoyé.');
   } else if (OUT_DIR) {
-    await publishFolder(manifest, [...mods, ...shaders], finish);
+    await publishFolder(manifest, all, finish);
   } else {
-    await publishGithub(manifest, [...mods, ...shaders], finish);
+    await publishGithub(manifest, all, finish);
   }
   console.log('\n✔ Terminé. Les joueurs recevront la mise à jour au prochain lancement.');
 }
