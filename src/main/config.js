@@ -14,9 +14,6 @@ module.exports = {
   // Remplace cette URL si tu héberges le manifest ailleurs (dossier synchronisé, site web...).
   MANIFEST_URL: `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/releases/download/mods/manifest.json`,
 
-  // Serveur affiché sur l'accueil (adresse vide = « bientôt »). Exemple : 'play.mon-serveur.fr' ou '12.34.56.78:25565'.
-  SERVER: { name: 'HARDCORE RADHES', address: '' },
-
   // Dossier du jeu, dans %APPDATA%. Séparé du .minecraft officiel.
   GAME_DIR_NAME: '.radhes-launcher',
 

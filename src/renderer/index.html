@@ -30,10 +30,7 @@
       <p id="error" class="error" role="alert" hidden></p>
 
       <nav class="menu">
-        <button data-view="rules">RÈGLES DU JEU</button>
-        <button data-view="settings">RÉGLAGES</button>
-        <span class="menu-gap"></span>
-        <button id="quit">QUITTER LE LAUNCHER</button>
+        <button data-view="settings">OPTIONS</button>
       </nav>
 
       <footer class="credit">Un launcher de RADHES · <span id="version"></span></footer>
@@ -48,30 +45,6 @@
         </div>
       </div>
 
-      <div id="server-card" class="card server">
-        <div class="card-head">
-          <span class="label">SERVEUR</span>
-          <span id="server-state" class="state"></span>
-        </div>
-        <div id="server-name" class="card-title">HARDCORE RADHES</div>
-        <div id="server-motd" class="card-sub">Survie hardcore · vie partagée</div>
-        <div class="divider"></div>
-        <div class="players">
-          <span id="players-count" class="players-count">-</span>
-          <div class="players-text">
-            <span id="players-line">joueur en ligne</span>
-            <span id="players-max" class="muted"></span>
-          </div>
-          <span id="server-ping" class="ping"></span>
-        </div>
-      </div>
-
-      <div class="card pack">
-        <div class="card-head"><span class="label">MODPACK</span><span id="pack-state" class="state"></span></div>
-        <div id="pack-title" class="card-title">MINECRAFT</div>
-        <div id="pack-sub" class="card-sub">Chargement...</div>
-      </div>
-
       <div id="tip-card" class="card tip">
         <div class="label">LE SAVAIS-TU ?</div>
         <div id="tip-title" class="tip-title"></div>
@@ -80,16 +53,9 @@
     </aside>
   </main>
 
-  <!-- ===== Règles ===== -->
-  <section id="view-rules" class="view page" hidden>
-    <h1 class="page-title red">RÈGLES DU JEU</h1>
-    <div id="rules" class="grid"></div>
-    <button class="btn-back" data-view="home"><span class="icon" data-icon="back"></span>RETOUR</button>
-  </section>
-
-  <!-- ===== Réglages ===== -->
+  <!-- ===== Options ===== -->
   <section id="view-settings" class="view page" hidden>
-    <h1 class="page-title white left">RÉGLAGES</h1>
+    <h1 class="page-title white left">OPTIONS</h1>
     <div class="grid" id="settings-grid">
       <div class="tile accent-cyan">
         <span class="tile-icon" data-icon="ram"></span>

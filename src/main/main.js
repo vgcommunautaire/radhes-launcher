@@ -8,7 +8,6 @@ const minecraft = require('./minecraft');
 const mods = require('./mods');
 const dl = require('./download');
 const skin = require('./skin');
-const { ping } = require('./ping');
 const { initUpdater } = require('./updater');
 const { UserError, friendlyMessage } = require('./errors');
 
@@ -102,24 +101,6 @@ handle('account:skin', async () => {
   if (!session) return { skin: null };
   return { skin: await skin.getSkin(session.profile.id, path.join(app.getPath('userData'), 'cache')) };
 });
-
-handle('pack:info', async () => {
-  const m = await mods.loadManifest(config.MANIFEST_URL, gameRoot());
-  return { minecraftVersion: m.minecraftVersion, loaderVersion: m.loader.version, modCount: m.mods.length };
-});
-
-handle('server:status', async () => {
-  const { name, address } = config.SERVER;
-  if (!address) return { name, configured: false };
-  try {
-    return { name, configured: true, reachable: true, ...(await ping(address)) };
-  } catch (err) {
-    log.warn(`Serveur ${address} injoignable :`, err.message);
-    return { name, configured: true, reachable: false };
-  }
-});
-
-handle('app:quit', async () => { app.quit(); return {}; });
 
 handle('game:play', async ({ deep = false } = {}) => {
   if (busy || game) throw new UserError('Le jeu est déjà en cours de lancement.');

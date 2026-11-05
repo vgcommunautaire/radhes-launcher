@@ -76,35 +76,45 @@ function buildHearts() {
   $('tb-heart').querySelector('.heart').classList.add('full');
 }
 
-// --- Sons (petits « bips » rétro générés, aucun fichier) -------------------
+// --- Sons (notes douces générées, aucun fichier) ---------------------------
 
 let audio = null;
 let soundsOn = true;
 try { soundsOn = localStorage.getItem('sounds') !== 'off'; } catch {}
 
-function blip(freq = 660, duration = 0.07) {
+// Une note sinusoïdale courte qui monte et s'éteint en douceur (pas de clic sec).
+function note(freq, start, duration, volume) {
+  const t = audio.currentTime + start;
+  const osc = audio.createOscillator();
+  const gain = audio.createGain();
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(freq, t);
+  gain.gain.setValueAtTime(0.0001, t);
+  gain.gain.exponentialRampToValueAtTime(volume, t + 0.012);
+  gain.gain.exponentialRampToValueAtTime(0.0001, t + duration);
+  osc.connect(gain).connect(audio.destination);
+  osc.start(t);
+  osc.stop(t + duration + 0.02);
+}
+
+// Clic normal : un « pop » léger. Bouton JOUER : deux notes qui montent.
+function blip(kind = 'click') {
   if (!soundsOn) return;
   try {
     audio = audio || new AudioContext();
-    const t = audio.currentTime;
-    const osc = audio.createOscillator();
-    const gain = audio.createGain();
-    osc.type = 'square';
-    osc.frequency.setValueAtTime(freq, t);
-    osc.frequency.exponentialRampToValueAtTime(freq * 0.6, t + duration);
-    gain.gain.setValueAtTime(0.035, t);
-    gain.gain.exponentialRampToValueAtTime(0.0001, t + duration);
-    osc.connect(gain).connect(audio.destination);
-    osc.start(t);
-    osc.stop(t + duration + 0.02);
+    if (kind === 'play') {
+      note(523, 0, 0.18, 0.05);
+      note(784, 0.09, 0.28, 0.045);
+    } else {
+      note(587, 0, 0.09, 0.04);
+    }
   } catch {}
 }
 
 // --- Navigation entre les écrans --------------------------------------------
 
 function showView(name) {
-  for (const v of ['home', 'rules', 'settings']) $(`view-${v}`).hidden = v !== name;
-  if (name === 'home') refreshServer();
+  for (const v of ['home', 'settings']) $(`view-${v}`).hidden = v !== name;
 }
 
 // --- Rendu de l'accueil -----------------------------------------------------
@@ -174,51 +184,7 @@ async function drawHead() {
   img.src = res.skin;
 }
 
-async function refreshServer() {
-  const res = await api.getServer();
-  if (!res.ok) return;
-  const card = $('server-card');
-  $('server-name').textContent = res.name;
-  card.classList.toggle('online', res.configured && res.reachable);
-  card.classList.toggle('offline', res.configured && !res.reachable);
-  if (!res.configured) {
-    $('server-state').textContent = 'BIENTÔT';
-    $('server-motd').textContent = 'Le serveur arrive bientôt';
-    $('players-count').textContent = '-';
-    $('players-line').textContent = 'en préparation';
-    $('players-max').textContent = '';
-    $('server-ping').textContent = '';
-  } else if (!res.reachable) {
-    $('server-state').textContent = 'HORS LIGNE';
-    $('server-motd').textContent = 'Le serveur ne répond pas';
-    $('players-count').textContent = '0';
-    $('players-line').textContent = 'joueur en ligne';
-    $('players-max').textContent = '';
-    $('server-ping').textContent = '';
-  } else {
-    $('server-state').textContent = 'EN LIGNE';
-    $('server-motd').textContent = res.motd || 'Survie hardcore · vie partagée';
-    $('players-count').textContent = String(res.online);
-    $('players-line').textContent = res.online > 1 ? 'joueurs en ligne' : 'joueur en ligne';
-    $('players-max').textContent = `sur ${res.max} places`;
-    $('server-ping').textContent = `${res.latencyMs} ms`;
-  }
-}
-
-async function refreshPack() {
-  const res = await api.getPack();
-  if (!res.ok) {
-    $('pack-title').textContent = 'MINECRAFT';
-    $('pack-sub').textContent = 'Liste des mods pas encore publiée';
-    $('pack-state').textContent = 'EN ATTENTE';
-    return;
-  }
-  $('pack-title').textContent = `MINECRAFT ${res.minecraftVersion}`;
-  $('pack-sub').textContent = `Fabric ${res.loaderVersion} · ${res.modCount} mod${res.modCount > 1 ? 's' : ''}`;
-  $('pack-state').textContent = 'SYNCHRONISÉ';
-}
-
-// --- Règles du jeu (les mêmes que dans le mod) -------------------------------
+// --- « Le savais-tu ? » : les règles du mod --------------------------------
 
 const RULES = [
   ['VIE PARTAGÉE', 'red', "Toute l'équipe partage une seule barre de 10 cœurs. Chaque dégât subi par l'un de vous est retiré à tous."],
@@ -249,18 +215,6 @@ function startTips() {
   };
   show();
   setInterval(show, 9000);
-}
-
-function buildRules() {
-  const box = $('rules');
-  for (const [title, color, text] of RULES) {
-    const card = document.createElement('div');
-    card.className = `rule accent-${color}`;
-    card.innerHTML = '<h3></h3><p></p>';
-    card.querySelector('h3').textContent = title;
-    card.querySelector('p').textContent = text;
-    box.appendChild(card);
-  }
 }
 
 // --- Braises en pixels ------------------------------------------------------
@@ -332,21 +286,20 @@ function renderSounds() {
 document.addEventListener('click', (e) => {
   const btn = e.target.closest('button');
   if (!btn || btn.disabled) return;
-  blip(btn.classList.contains('btn-big') ? 440 : 700);
+  blip(btn.classList.contains('btn-big') ? 'play' : 'click');
   if (btn.dataset.view) showView(btn.dataset.view);
   if (btn.dataset.folder) api.openFolder(btn.dataset.folder);
 });
 
 $('play').addEventListener('click', () => play(false));
 $('verify').addEventListener('click', () => play(true));
-$('quit').addEventListener('click', () => api.quit());
 $('ram-down').addEventListener('click', () => stepRam(-1));
 $('ram-up').addEventListener('click', () => stepRam(1));
 $('sounds').addEventListener('click', () => {
   soundsOn = !soundsOn;
   try { localStorage.setItem('sounds', soundsOn ? 'on' : 'off'); } catch {}
   renderSounds();
-  blip(880);
+  blip();
 });
 
 $('login').addEventListener('click', async () => {
@@ -397,7 +350,6 @@ api.on('update', (u) => {
 
 fillIcons();
 buildHearts();
-buildRules();
 startTips();
 renderSounds();
 startEmbers();
@@ -416,7 +368,4 @@ render();
   if (s.warning) showError(s.warning);
   render();
   drawHead();
-  refreshPack();
-  refreshServer();
-  setInterval(() => { if (!$('view-home').hidden) refreshServer(); }, 30000);
 })();

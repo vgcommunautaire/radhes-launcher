@@ -124,20 +124,12 @@ button:disabled { cursor: default; opacity: .55; }
   border-left: 4px solid #4a1013; transition: color .12s, border-color .12s, padding .12s;
 }
 .menu button:hover { color: #fff; border-color: var(--red); padding-left: 64px; }
-.menu-gap { flex: 1; min-height: 12px; max-height: 50px; }
 .credit { color: var(--muted); font-size: 18px; margin-top: 12px; }
 
 /* --- Cartes de droite ------------------------------------------------------ */
 
 .card { background: var(--card); padding: 18px 22px; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .04), 0 10px 30px rgba(0, 0, 0, .35); }
-.card-head { display: flex; justify-content: space-between; align-items: center; }
 .label { color: var(--muted); font-size: 17px; letter-spacing: 2px; }
-.state { font-size: 18px; letter-spacing: 1px; }
-.state::before { content: ""; display: inline-block; width: 11px; height: 11px; margin-right: 8px; background: currentColor; }
-.card-title { font-size: 38px; margin-top: 6px; letter-spacing: 1px; }
-.card-sub { color: var(--muted); font-size: 17px; margin-top: 2px; }
-.divider { height: 2px; background: rgba(255, 255, 255, .07); margin: 16px 0; }
-.muted { color: var(--muted); }
 
 .account { display: flex; align-items: center; gap: 18px; border-right: 5px solid var(--red); align-self: flex-end; min-width: 300px; }
 #head { width: 64px; height: 64px; image-rendering: pixelated; background: #2a2630; }
@@ -146,22 +138,7 @@ button:disabled { cursor: default; opacity: .55; }
 .account-status.ok { color: var(--green); }
 .account-status.busy { color: var(--yellow); }
 
-.server { border-top: 3px solid var(--grey); }
-.server.online { border-top-color: var(--green); background: linear-gradient(180deg, rgba(22, 36, 28, .94), rgba(15, 18, 20, .94)); }
-.server.offline { border-top-color: var(--red); }
-.server .state { color: var(--grey); }
-.server.online .state { color: var(--green); }
-.server.offline .state { color: var(--red); }
-.players { display: flex; align-items: center; gap: 16px; }
-.players-count { min-width: 44px; height: 52px; padding: 0 8px; display: grid; place-items: center; font-size: 34px; background: rgba(0, 0, 0, .35); box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .08); }
-.players-text { display: flex; flex-direction: column; flex: 1; font-size: 21px; }
-.players-text .muted { font-size: 17px; }
-.ping { color: var(--green); font-size: 21px; }
-
-.pack { border-top: 3px solid var(--purple); }
-.pack .state { color: var(--purple); }
-
-.tip { border-left: 5px solid var(--c, var(--yellow)); min-height: 0; }
+.tip { border-left: 5px solid var(--c, var(--yellow)); margin-top: auto; }
 .tip-title { color: var(--c, var(--yellow)); font-size: 22px; margin: 8px 0 4px; letter-spacing: 1px; }
 .tip-text { font-size: 18px; color: #e6e0e4; line-height: 1.3; }
 .tip-in .tip-title, .tip-in .tip-text { animation: tip .5s ease-out; }
@@ -171,17 +148,12 @@ button:disabled { cursor: default; opacity: .55; }
 
 .page { display: flex; flex-direction: column; padding-top: 52px; }
 .page-title { margin: 0 0 22px; font-weight: normal; font-size: 72px; line-height: 1; letter-spacing: 2px; }
-.page-title.red { color: var(--red); text-align: center; text-shadow: 5px 5px 0 var(--red-deep); }
 .page-title.white { text-shadow: 5px 5px 0 rgba(0, 0, 0, .6); }
 .page-title.left { align-self: flex-start; border-bottom: 5px solid #3b3540; padding-bottom: 6px; }
 .page-title.left::after { content: ""; display: block; width: 60%; height: 5px; background: var(--text); margin-bottom: -11px; margin-top: 6px; }
 
 .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 16px; width: min(1060px, 100%); margin: 0 auto; overflow-y: auto; padding-right: 4px; }
 
-.rule { background: var(--card); border-left: 5px solid var(--c); padding: 10px 18px; }
-.rule h3 { margin: 0 0 3px; font-weight: normal; font-size: 21px; color: var(--c); letter-spacing: 1px; }
-.rule p { margin: 0; font-size: 17px; line-height: 1.25; color: #e6e0e4; }
-#rules { gap: 10px 16px; }
 
 .tile {
   display: flex; align-items: center; gap: 20px; text-align: left;
@@ -222,13 +194,9 @@ button.tile:hover { filter: brightness(1.25); transform: translateX(4px); }
   .btn-back { height: 66px; margin-top: 18px; }
   .title-rule { margin: 14px 0 12px; }
   .menu { margin-top: 18px; }
-  .menu-gap { max-height: 20px; }
   .home-right { gap: 16px; }
   .card { padding: 14px 20px; }
-  .card-title { font-size: 34px; }
-  .divider { margin: 12px 0; }
   .tip-text { font-size: 17px; }
-  .rule { padding: 8px 16px; }
 }
 
 @media (max-height: 680px) {
@@ -237,11 +205,8 @@ button.tile:hover { filter: brightness(1.25); transform: translateX(4px); }
   .btn-big { height: 80px; font-size: 40px; }
   .menu { margin-top: 14px; }
   .menu button { font-size: 25px; padding-top: 5px; padding-bottom: 5px; }
-  .menu-gap { max-height: 24px; }
   .card { padding: 14px 18px; }
-  .card-title { font-size: 32px; }
   .home-right { gap: 16px; }
-  .tip { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
