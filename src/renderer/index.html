@@ -2,82 +2,131 @@
 <html lang="fr">
 <head>
   <meta charset="utf-8">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data:">
   <title>Radhes Launcher</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <!-- Cœur en pixels, réutilisé pour le logo et la barre de progression. -->
-  <svg width="0" height="0" class="defs" aria-hidden="true">
-    <defs>
-      <symbol id="heart" viewBox="0 0 9 8" shape-rendering="crispEdges">
-        <path d="M1 0h2v1h-2zM6 0h2v1h-2zM0 1h4v1h-4zM5 1h4v1h-4zM0 2h9v2h-9zM1 4h7v1h-7zM2 5h5v1h-5zM3 6h3v1h-3zM4 7h1v1h-1z"/>
-      </symbol>
-      <symbol id="heart-shine" viewBox="0 0 9 8" shape-rendering="crispEdges">
-        <path d="M1 1h2v1h-2zM1 2h1v1h-1z"/>
-      </symbol>
-    </defs>
-  </svg>
-
+  <div class="titlebar"><span id="tb-heart" class="tb-heart"></span><span>RADHES LAUNCHER</span></div>
   <canvas id="embers" aria-hidden="true"></canvas>
   <div class="vignette" aria-hidden="true"></div>
-
   <div id="update-banner" class="banner" hidden></div>
 
-  <header>
-    <div class="brand">
-      <svg class="logo" viewBox="0 0 9 8" aria-hidden="true">
-        <use href="#heart" class="fill"/>
-        <use href="#heart-shine" class="shine"/>
-      </svg>
-      <div class="brand-text">
-        <h1>RADHES</h1>
-        <span class="subtitle">LAUNCHER</span>
-      </div>
-    </div>
-    <div class="account">
-      <div id="account-box" class="account-box" hidden>
-        <span id="avatar" class="avatar"></span>
-        <div class="account-text">
-          <span id="account-name"></span>
-          <button id="logout" class="link">Se déconnecter</button>
-        </div>
-      </div>
-    </div>
-  </header>
+  <!-- ===== Accueil ===== -->
+  <main id="view-home" class="view">
+    <section class="home-left">
+      <h1 class="title-red">HARDCORE</h1>
+      <div class="title-rule"><span></span></div>
+      <h2 class="title-white">RADHES</h2>
+      <p class="subtitle"><span class="dash"></span>Si l'un tombe, tous tombent.</p>
 
-  <main>
-    <section class="hero">
-      <p class="tagline">Si l'un tombe, tous tombent.</p>
-      <p class="muted">Hardcore · vie partagée</p>
-
-      <button id="login" class="primary" hidden>Se connecter avec Microsoft</button>
-      <button id="play" class="primary play" hidden>JOUER</button>
+      <button id="play" class="btn-big" hidden><span class="icon" data-icon="play"></span><span id="play-label">JOUER</span></button>
+      <button id="login" class="btn-big long" hidden><span class="icon" data-icon="play"></span><span>SE CONNECTER</span></button>
 
       <div id="progress" class="progress" hidden>
         <div id="hearts" class="hearts" aria-hidden="true"></div>
         <span id="progress-label"></span>
       </div>
-
-      <p id="status" class="status"></p>
       <p id="error" class="error" role="alert" hidden></p>
+
+      <nav class="menu">
+        <button data-view="rules">RÈGLES DU JEU</button>
+        <button data-view="settings">RÉGLAGES</button>
+        <span class="menu-gap"></span>
+        <button id="quit">QUITTER LE LAUNCHER</button>
+      </nav>
+
+      <footer class="credit">Un launcher de RADHES · <span id="version"></span></footer>
     </section>
 
-    <details class="settings">
-      <summary>Réglages</summary>
-      <label>
-        Mémoire allouée au jeu
-        <select id="ram"></select>
-      </label>
-      <div class="row">
-        <button id="verify" class="secondary">Vérifier et réparer les fichiers</button>
-        <button id="open-game" class="secondary">Ouvrir le dossier du jeu</button>
-        <button id="open-logs" class="secondary">Ouvrir les journaux</button>
+    <aside class="home-right">
+      <div class="card account">
+        <canvas id="head" width="64" height="64"></canvas>
+        <div>
+          <div id="account-name" class="account-name">INVITÉ</div>
+          <div id="account-status" class="account-status">Non connecté</div>
+        </div>
       </div>
-    </details>
+
+      <div id="server-card" class="card server">
+        <div class="card-head">
+          <span class="label">SERVEUR</span>
+          <span id="server-state" class="state"></span>
+        </div>
+        <div id="server-name" class="card-title">HARDCORE RADHES</div>
+        <div id="server-motd" class="card-sub">Survie hardcore · vie partagée</div>
+        <div class="divider"></div>
+        <div class="players">
+          <span id="players-count" class="players-count">-</span>
+          <div class="players-text">
+            <span id="players-line">joueur en ligne</span>
+            <span id="players-max" class="muted"></span>
+          </div>
+          <span id="server-ping" class="ping"></span>
+        </div>
+      </div>
+
+      <div class="card pack">
+        <div class="card-head"><span class="label">MODPACK</span><span id="pack-state" class="state"></span></div>
+        <div id="pack-title" class="card-title">MINECRAFT</div>
+        <div id="pack-sub" class="card-sub">Chargement...</div>
+      </div>
+
+      <div id="tip-card" class="card tip">
+        <div class="label">LE SAVAIS-TU ?</div>
+        <div id="tip-title" class="tip-title"></div>
+        <div id="tip-text" class="tip-text"></div>
+      </div>
+    </aside>
   </main>
 
-  <footer><span id="version"></span></footer>
+  <!-- ===== Règles ===== -->
+  <section id="view-rules" class="view page" hidden>
+    <h1 class="page-title red">RÈGLES DU JEU</h1>
+    <div id="rules" class="grid"></div>
+    <button class="btn-back" data-view="home"><span class="icon" data-icon="back"></span>RETOUR</button>
+  </section>
+
+  <!-- ===== Réglages ===== -->
+  <section id="view-settings" class="view page" hidden>
+    <h1 class="page-title white left">RÉGLAGES</h1>
+    <div class="grid" id="settings-grid">
+      <div class="tile accent-cyan">
+        <span class="tile-icon" data-icon="ram"></span>
+        <div class="tile-text"><span class="tile-title">MÉMOIRE</span><span class="tile-sub">RAM donnée au jeu</span></div>
+        <div class="stepper"><button id="ram-down" aria-label="Moins">◀</button><span id="ram-value">4 Go</span><button id="ram-up" aria-label="Plus">▶</button></div>
+      </div>
+      <button class="tile accent-purple" data-folder="resourcepacks">
+        <span class="tile-icon" data-icon="frame"></span>
+        <div class="tile-text"><span class="tile-title">PACKS DE TEXTURES</span><span class="tile-sub">Ouvrir le dossier</span></div>
+      </button>
+      <button class="tile accent-yellow" data-folder="shaderpacks">
+        <span class="tile-icon" data-icon="sun"></span>
+        <div class="tile-text"><span class="tile-title">SHADERS</span><span class="tile-sub">Ouvrir le dossier</span></div>
+      </button>
+      <button class="tile accent-green" data-folder="screenshots">
+        <span class="tile-icon" data-icon="camera"></span>
+        <div class="tile-text"><span class="tile-title">CAPTURES D'ÉCRAN</span><span class="tile-sub">Tes plus beaux moments</span></div>
+      </button>
+      <button id="verify" class="tile accent-orange">
+        <span class="tile-icon" data-icon="wrench"></span>
+        <div class="tile-text"><span class="tile-title">RÉPARER LE JEU</span><span class="tile-sub">Tout vérifier, puis jouer</span></div>
+      </button>
+      <button class="tile accent-grey" data-folder="logs">
+        <span class="tile-icon" data-icon="paper"></span>
+        <div class="tile-text"><span class="tile-title">JOURNAUX</span><span class="tile-sub">Pour signaler un problème</span></div>
+      </button>
+      <button id="sounds" class="tile accent-blue">
+        <span class="tile-icon" data-icon="note"></span>
+        <div class="tile-text"><span class="tile-title">SONS DU LAUNCHER</span><span id="sounds-sub" class="tile-sub">Activés</span></div>
+      </button>
+      <button id="logout" class="tile accent-red">
+        <span class="tile-icon" data-icon="door"></span>
+        <div class="tile-text"><span class="tile-title">SE DÉCONNECTER</span><span class="tile-sub">Changer de compte</span></div>
+      </button>
+    </div>
+    <button class="btn-back" data-view="home"><span class="icon" data-icon="back"></span>RETOUR</button>
+  </section>
 
   <script src="app.js"></script>
 </body>

@@ -10,6 +10,10 @@ contextBridge.exposeInMainWorld('launcher', {
   play: (opts) => ipcRenderer.invoke('game:play', opts),
   saveSettings: (s) => ipcRenderer.invoke('settings:save', s),
   openFolder: (which) => ipcRenderer.invoke('folder:open', which),
+  getSkin: () => ipcRenderer.invoke('account:skin'),
+  getPack: () => ipcRenderer.invoke('pack:info'),
+  getServer: () => ipcRenderer.invoke('server:status'),
+  quit: () => ipcRenderer.invoke('app:quit'),
   on: (channel, cb) => {
     if (EVENTS.includes(channel)) ipcRenderer.on(channel, (_e, data) => cb(data));
   },

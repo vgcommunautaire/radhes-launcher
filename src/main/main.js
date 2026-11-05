@@ -7,6 +7,8 @@ const auth = require('./auth');
 const minecraft = require('./minecraft');
 const mods = require('./mods');
 const dl = require('./download');
+const skin = require('./skin');
+const { ping } = require('./ping');
 const { initUpdater } = require('./updater');
 const { UserError, friendlyMessage } = require('./errors');
 
@@ -21,14 +23,17 @@ const progress = (p) => send('progress', p);
 
 function createWindow() {
   win = new BrowserWindow({
-    width: 960,
-    height: 600,
-    minWidth: 760,
-    minHeight: 520,
+    width: 1180,
+    height: 720,
+    minWidth: 1000,
+    minHeight: 640,
     title: 'Radhes Launcher',
-    backgroundColor: '#0b0707',
+    backgroundColor: '#0e0a0b',
     icon: path.join(__dirname, '..', 'assets', 'icon.png'),
     autoHideMenuBar: true,
+    // Barre de titre intégrée au design ; Windows garde ses boutons réduire / agrandir / fermer.
+    titleBarStyle: 'hidden',
+    titleBarOverlay: { color: '#0e0a0b', symbolColor: '#b39a9a', height: 34 },
     webPreferences: {
       preload: path.join(__dirname, '..', 'preload.js'),
       contextIsolation: true,
@@ -76,12 +81,45 @@ handle('auth:logout', async () => { auth.logout(); return {}; });
 
 handle('settings:save', async (s) => ({ settings: store.saveSettings(s) }));
 
+// Dossiers que les joueurs ont le droit d'ouvrir (pas celui des mods, géré par le launcher).
+const FOLDERS = {
+  logs: () => path.dirname(log.file),
+  resourcepacks: () => path.join(gameRoot(), 'resourcepacks'),
+  shaderpacks: () => path.join(gameRoot(), 'shaderpacks'),
+  screenshots: () => path.join(gameRoot(), 'screenshots'),
+};
+
 handle('folder:open', async (which) => {
-  const target = which === 'logs' ? path.dirname(log.file) : which === 'mods' ? path.join(gameRoot(), 'mods') : gameRoot();
+  if (!FOLDERS[which]) throw new UserError('Dossier inconnu.');
+  const target = FOLDERS[which]();
   require('fs').mkdirSync(target, { recursive: true });
   await shell.openPath(target);
   return {};
 });
+
+handle('account:skin', async () => {
+  const session = store.loadSession();
+  if (!session) return { skin: null };
+  return { skin: await skin.getSkin(session.profile.id, path.join(app.getPath('userData'), 'cache')) };
+});
+
+handle('pack:info', async () => {
+  const m = await mods.loadManifest(config.MANIFEST_URL, gameRoot());
+  return { minecraftVersion: m.minecraftVersion, loaderVersion: m.loader.version, modCount: m.mods.length };
+});
+
+handle('server:status', async () => {
+  const { name, address } = config.SERVER;
+  if (!address) return { name, configured: false };
+  try {
+    return { name, configured: true, reachable: true, ...(await ping(address)) };
+  } catch (err) {
+    log.warn(`Serveur ${address} injoignable :`, err.message);
+    return { name, configured: true, reachable: false };
+  }
+});
+
+handle('app:quit', async () => { app.quit(); return {}; });
 
 handle('game:play', async ({ deep = false } = {}) => {
   if (busy || game) throw new UserError('Le jeu est déjà en cours de lancement.');

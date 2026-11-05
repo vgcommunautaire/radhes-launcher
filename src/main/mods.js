@@ -39,14 +39,12 @@ async function syncMods({ root, manifest, onProgress = () => {}, log }) {
   await fsp.mkdir(modsDir, { recursive: true });
   const wanted = new Map(manifest.mods.map((m) => [m.file.toLowerCase(), m]));
 
-  // Supprime les mods qui ne sont plus dans la liste (et les téléchargements interrompus).
+  // Le dossier mods/ ne doit contenir que la liste officielle : tout le reste est supprimé
+  // (mods ajoutés à la main, sous-dossiers, fichiers renommés, téléchargements interrompus...).
   for (const entry of await fsp.readdir(modsDir, { withFileTypes: true })) {
-    const name = entry.name.toLowerCase();
-    if (!entry.isFile()) continue;
-    if (name.endsWith('.part') || (name.endsWith('.jar') && !wanted.has(name))) {
-      log?.info(`Suppression du mod retiré : ${entry.name}`);
-      await fsp.rm(path.join(modsDir, entry.name), { force: true });
-    }
+    if (entry.isFile() && wanted.has(entry.name.toLowerCase())) continue;
+    log?.info(`Suppression de mods/${entry.name} (absent de la liste officielle)`);
+    await fsp.rm(path.join(modsDir, entry.name), { recursive: true, force: true });
   }
 
   onProgress({ label: 'Vérification des mods...', percent: null });
