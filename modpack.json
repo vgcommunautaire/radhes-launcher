@@ -1,5 +1,6 @@
 {
   "minecraftVersion": "26.3",
   "loaderVersion": "latest",
-  "launcherMinVersion": "1.0.0"
+  "launcherMinVersion": "1.0.0",
+  "defaultShader": "ComplementaryUnbound_r5.9.3.zip"
 }

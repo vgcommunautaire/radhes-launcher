@@ -126,6 +126,7 @@ handle('game:play', async ({ deep = false } = {}) => {
       onProgress: progress,
     });
     await mods.syncMods({ root, manifest, onProgress: progress, log });
+    await mods.syncShaders({ root, manifest, onProgress: progress, log });
 
     progress({ label: 'Lancement du jeu...', percent: 100 });
     const settings = store.loadSettings();

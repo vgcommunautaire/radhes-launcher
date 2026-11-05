@@ -1,0 +1,3 @@
+﻿Mets ici les shaders (.zip) a proposer a tout le monde.
+Le shader active par defaut se choisit dans modpack.json (defaultShader).
+Ensuite, double-clique sur "Publier les mods".

@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-// Publie la liste des mods : lit le dossier mods/, calcule les SHA-256, génère manifest.json et le met en ligne.
+// Publie la liste des mods : lit les dossiers mods/ et shaderpacks/, calcule les SHA-256,
+// génère manifest.json et le met en ligne. Le shader par défaut est choisi dans modpack.json (« defaultShader »).
 //
 //   npm run publish-mods                           → GitHub Releases (release « mods » du dépôt)
 //   npm run publish-mods -- --essai                → génère seulement dist/manifest.json, sans rien envoyer
@@ -31,6 +32,7 @@ const DRY_RUN = process.argv.includes('--essai');
 const OUT_DIR = arg('--dossier');
 const BASE_URL = arg('--url-base');
 const MODS_DIR = path.resolve(arg('--mods') || path.join(ROOT, 'mods'));
+const SHADERS_DIR = path.join(ROOT, 'shaderpacks');
 const NO_MODRINTH = process.argv.includes('--sans-modrinth');
 
 function fail(msg) {
@@ -53,21 +55,27 @@ async function http(url, { method = 'GET', headers = {}, body, json } = {}) {
 
 // --- Fichiers locaux -------------------------------------------------------
 
-async function readLocalMods() {
-  if (!fs.existsSync(MODS_DIR)) fail(`Dossier des mods introuvable : ${MODS_DIR}`);
-  const files = (await fsp.readdir(MODS_DIR)).filter((f) => f.toLowerCase().endsWith('.jar')).sort();
-  if (!files.length) console.warn('⚠ Aucun .jar dans le dossier des mods : le manifest sera vide.');
-  const mods = [];
+// kind : 'mod' (.jar du dossier mods/) ou 'shader' (.zip du dossier shaderpacks/).
+async function readLocalFiles(dir, ext, kind) {
+  if (!fs.existsSync(dir)) {
+    if (kind === 'mod') fail(`Dossier des mods introuvable : ${dir}`);
+    return [];
+  }
+  const files = (await fsp.readdir(dir)).filter((f) => f.toLowerCase().endsWith(ext)).sort();
+  if (!files.length && kind === 'mod') console.warn('⚠ Aucun .jar dans le dossier des mods : le manifest sera vide.');
+  const items = [];
   for (const file of files) {
-    const data = await fsp.readFile(path.join(MODS_DIR, file));
-    mods.push({
+    const data = await fsp.readFile(path.join(dir, file));
+    items.push({
+      kind,
+      dir,
       file,
       size: data.length,
       sha1: crypto.createHash('sha1').update(data).digest('hex'),
       sha256: crypto.createHash('sha256').update(data).digest('hex'),
     });
   }
-  return mods;
+  return items;
 }
 
 async function resolveLoaderVersion() {
@@ -104,7 +112,8 @@ async function matchModrinth(mods) {
     if (!f) continue;
     mod.url = f.url;
     mod.name = titles[v.project_id] || v.name;
-    if (!v.loaders.includes('fabric')) console.warn(`⚠ ${mod.file} : cette version n'est pas marquée compatible Fabric sur Modrinth.`);
+    const loader = mod.kind === 'shader' ? 'iris' : 'fabric';
+    if (!v.loaders.includes(loader)) console.warn(`⚠ ${mod.file} : cette version n'est pas marquée compatible ${loader === 'iris' ? 'Iris' : 'Fabric'} sur Modrinth.`);
     if (!v.game_versions.includes(modpack.minecraftVersion)) {
       console.warn(`⚠ ${mod.file} : cette version n'est pas marquée compatible Minecraft ${modpack.minecraftVersion} sur Modrinth.`);
     }
@@ -164,13 +173,13 @@ const deleteAsset = (id) => gh(`/repos/${owner}/${repo}/releases/assets/${id}`, 
 // GitHub peut renommer les fichiers (espaces, accents...) : on retrouve un fichier par son libellé d'origine.
 const assetOriginalName = (a) => a.label || a.name;
 
-async function publishGithub(manifest, mods) {
+async function publishGithub(manifest, items, finish) {
   if (!process.env.GH_TOKEN && !process.env.GITHUB_TOKEN) fail('Variable GH_TOKEN manquante (jeton GitHub).');
   const release = await getOrCreateRelease();
   const assets = await listAssets(release.id);
   const keep = new Set(['manifest.json']);
 
-  for (const mod of mods.filter((m) => !m.url)) {
+  for (const mod of items.filter((m) => !m.url)) {
     keep.add(mod.file);
     const existing = assets.find((a) => assetOriginalName(a) === mod.file);
     if (existing && existing.digest === `sha256:${mod.sha256}`) {
@@ -180,12 +189,13 @@ async function publishGithub(manifest, mods) {
     }
     if (existing) await deleteAsset(existing.id);
     console.log(`  ↑ ${mod.file}`);
-    const uploaded = await uploadAsset(release, mod.file, await fsp.readFile(path.join(MODS_DIR, mod.file)), 'application/java-archive');
+    const type = mod.kind === 'shader' ? 'application/zip' : 'application/java-archive';
+    const uploaded = await uploadAsset(release, mod.file, await fsp.readFile(path.join(mod.dir, mod.file)), type);
     mod.url = uploaded.browser_download_url;
   }
 
   // Le manifest en dernier : les joueurs ne voient la nouvelle liste qu'une fois tous les fichiers en ligne.
-  manifest.mods = toManifestMods(mods);
+  finish();
   const oldManifest = assets.find((a) => assetOriginalName(a) === 'manifest.json');
   if (oldManifest) await deleteAsset(oldManifest.id);
   const up = await uploadAsset(release, 'manifest.json', Buffer.from(JSON.stringify(manifest, null, 2)), 'application/json');
@@ -201,57 +211,74 @@ async function publishGithub(manifest, mods) {
 
 // --- Dossier à synchroniser ------------------------------------------------
 
-async function publishFolder(manifest, mods) {
+async function publishFolder(manifest, items, finish) {
   if (!BASE_URL) fail('Avec --dossier, indique aussi --url-base (adresse publique de ce dossier).');
   const base = BASE_URL.replace(/\/?$/, '/');
   await fsp.mkdir(OUT_DIR, { recursive: true });
   const keep = new Set(['manifest.json']);
-  for (const mod of mods.filter((m) => !m.url)) {
+  for (const mod of items.filter((m) => !m.url)) {
     keep.add(mod.file);
-    await fsp.copyFile(path.join(MODS_DIR, mod.file), path.join(OUT_DIR, mod.file));
+    await fsp.copyFile(path.join(mod.dir, mod.file), path.join(OUT_DIR, mod.file));
     mod.url = base + encodeURIComponent(mod.file);
     console.log(`  → ${mod.file}`);
   }
   for (const f of await fsp.readdir(OUT_DIR)) {
-    if (f.toLowerCase().endsWith('.jar') && !keep.has(f)) await fsp.rm(path.join(OUT_DIR, f));
+    if (/\.(jar|zip)$/i.test(f) && !keep.has(f)) await fsp.rm(path.join(OUT_DIR, f));
   }
-  manifest.mods = toManifestMods(mods);
+  finish();
   await fsp.writeFile(path.join(OUT_DIR, 'manifest.json'), JSON.stringify(manifest, null, 2));
   console.log(`  → manifest.json (à mettre en ligne à l'adresse ${base}manifest.json)`);
 }
 
 // --- Principal -------------------------------------------------------------
 
-function toManifestMods(mods) {
-  return mods.map((m) => ({ name: m.name || m.file.replace(/\.jar$/i, ''), file: m.file, url: m.url, sha256: m.sha256 }));
+function toManifestEntries(items) {
+  return items.map((m) => ({ name: m.name || m.file.replace(/\.(jar|zip)$/i, ''), file: m.file, url: m.url, sha256: m.sha256 }));
 }
 
 async function main() {
   console.log(`Mods lus dans : ${MODS_DIR}`);
-  const mods = await readLocalMods();
+  const mods = await readLocalFiles(MODS_DIR, '.jar', 'mod');
+  const shaders = await readLocalFiles(SHADERS_DIR, '.zip', 'shader');
   const loaderVersion = await resolveLoaderVersion();
-  await matchModrinth(mods);
+  await matchModrinth([...mods, ...shaders]);
+
+  const defaultShader = modpack.defaultShader || (shaders.length === 1 ? shaders[0].file : null);
+  if (defaultShader && !shaders.some((s) => s.file === defaultShader)) {
+    fail(`Le shader par défaut « ${defaultShader} » (modpack.json) n'est pas dans le dossier shaderpacks.`);
+  }
 
   const manifest = {
     minecraftVersion: modpack.minecraftVersion,
     loader: { type: 'fabric', version: loaderVersion },
     launcherMinVersion: modpack.launcherMinVersion || '1.0.0',
     mods: [],
+    shaderpacks: [],
+    defaultShader,
+  };
+  const finish = () => {
+    manifest.mods = toManifestEntries(mods);
+    manifest.shaderpacks = toManifestEntries(shaders);
   };
 
   console.log(`\nMinecraft ${manifest.minecraftVersion}, Fabric ${loaderVersion}, ${mods.length} mod(s) :`);
   for (const m of mods) console.log(`  • ${m.file}${m.url ? '  [Modrinth]' : ''}`);
+  if (shaders.length) {
+    console.log(`${shaders.length} shader(s) :`);
+    for (const s of shaders) console.log(`  • ${s.file}${s.url ? '  [Modrinth]' : ''}${s.file === defaultShader ? '  (activé par défaut)' : ''}`);
+  }
   console.log('');
 
   if (DRY_RUN) {
-    manifest.mods = toManifestMods(mods.map((m) => ({ ...m, url: m.url || `https://github.com/${owner}/${repo}/releases/download/${TAG}/${encodeURIComponent(m.file)}` })));
+    for (const m of [...mods, ...shaders]) m.url = m.url || `https://github.com/${owner}/${repo}/releases/download/${TAG}/${encodeURIComponent(m.file)}`;
+    finish();
     await fsp.mkdir(path.join(ROOT, 'dist'), { recursive: true });
     await fsp.writeFile(path.join(ROOT, 'dist', 'manifest.json'), JSON.stringify(manifest, null, 2));
     console.log('Mode essai : dist/manifest.json généré, rien n\'a été envoyé.');
   } else if (OUT_DIR) {
-    await publishFolder(manifest, mods);
+    await publishFolder(manifest, [...mods, ...shaders], finish);
   } else {
-    await publishGithub(manifest, mods);
+    await publishGithub(manifest, [...mods, ...shaders], finish);
   }
   console.log('\n✔ Terminé. Les joueurs recevront la mise à jour au prochain lancement.');
 }

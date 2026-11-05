@@ -5,17 +5,26 @@ const path = require('path');
 const dl = require('./download');
 const { UserError } = require('./errors');
 
+function validateEntries(list, ext) {
+  for (const item of list) {
+    // Le nom de fichier ne doit pas pouvoir sortir de son dossier (mods/ ou shaderpacks/).
+    if (typeof item.file !== 'string' || item.file !== path.basename(item.file) || !item.file.toLowerCase().endsWith(ext)) {
+      throw new UserError(`Le manifest contient un nom de fichier invalide : ${item.file}`);
+    }
+    if (!/^https:\/\//.test(item.url || '')) throw new UserError(`Adresse de téléchargement invalide pour ${item.file}.`);
+    if (!/^[a-f0-9]{64}$/i.test(item.sha256 || '')) throw new UserError(`Empreinte SHA-256 invalide pour ${item.file}.`);
+  }
+}
+
 function validateManifest(m) {
   if (!m || typeof m.minecraftVersion !== 'string') throw new UserError('Le manifest des mods est invalide (version de Minecraft manquante).');
   if (m.loader?.type !== 'fabric') throw new UserError('Le manifest des mods est invalide : seul le loader Fabric est géré.');
   if (!Array.isArray(m.mods)) throw new UserError('Le manifest des mods est invalide (liste « mods » manquante).');
-  for (const mod of m.mods) {
-    // Le nom de fichier ne doit pas pouvoir sortir du dossier mods/.
-    if (typeof mod.file !== 'string' || mod.file !== path.basename(mod.file) || !mod.file.toLowerCase().endsWith('.jar')) {
-      throw new UserError(`Le manifest contient un nom de fichier invalide : ${mod.file}`);
-    }
-    if (!/^https:\/\//.test(mod.url || '')) throw new UserError(`Adresse de téléchargement invalide pour ${mod.file}.`);
-    if (!/^[a-f0-9]{64}$/i.test(mod.sha256 || '')) throw new UserError(`Empreinte SHA-256 invalide pour ${mod.file}.`);
+  validateEntries(m.mods, '.jar');
+  m.shaderpacks = Array.isArray(m.shaderpacks) ? m.shaderpacks : [];
+  validateEntries(m.shaderpacks, '.zip');
+  if (m.defaultShader && !m.shaderpacks.some((s) => s.file === m.defaultShader)) {
+    throw new UserError('Le manifest est invalide : le shader par défaut ne fait pas partie de la liste.');
   }
   return m;
 }
@@ -56,4 +65,57 @@ async function syncMods({ root, manifest, onProgress = () => {}, log }) {
   log?.info(`Mods à jour (${manifest.mods.length} au total, ${count} téléchargé(s)).`);
 }
 
-module.exports = { loadManifest, validateManifest, compareVersions, syncMods };
+// Shaders : le launcher télécharge ceux de la liste sans toucher aux shaders ajoutés par le joueur.
+// Il retient ceux qu'il a installés lui-même pour pouvoir les retirer s'ils quittent la liste.
+async function syncShaders({ root, manifest, onProgress = () => {}, log }) {
+  const dir = path.join(root, 'shaderpacks');
+  const managedFile = path.join(dir, '.radhes-launcher.json');
+  await fsp.mkdir(dir, { recursive: true });
+
+  let managed = [];
+  try { managed = JSON.parse(await fsp.readFile(managedFile, 'utf8')); } catch {}
+  const wanted = new Set(manifest.shaderpacks.map((s) => s.file));
+  for (const file of managed) {
+    if (!wanted.has(file) && file === path.basename(file)) {
+      log?.info(`Suppression du shader retiré de la liste : ${file}`);
+      await fsp.rm(path.join(dir, file), { force: true });
+    }
+  }
+
+  const tasks = manifest.shaderpacks.map((s) => ({ url: s.url, dest: path.join(dir, s.file), sha256: s.sha256, alwaysHash: true }));
+  await dl.downloadAll(tasks, {
+    concurrency: 2,
+    onProgress: ({ done, total }) => onProgress({ label: 'Téléchargement des shaders...', percent: (done / total) * 100 }),
+  });
+  await fsp.writeFile(managedFile, JSON.stringify([...wanted]));
+
+  if (manifest.defaultShader) await applyDefaultShader(root, manifest.defaultShader, log);
+}
+
+// Active le shader par défaut dans Iris (config/iris.properties), une seule fois par shader :
+// si le joueur change ou coupe le shader ensuite, son choix est respecté.
+async function applyDefaultShader(root, shader, log) {
+  const configDir = path.join(root, 'config');
+  const marker = path.join(configDir, '.radhes-shader-par-defaut');
+  let applied = null;
+  try { applied = (await fsp.readFile(marker, 'utf8')).trim(); } catch {}
+  if (applied === shader) return;
+
+  const propsFile = path.join(configDir, 'iris.properties');
+  let lines = [];
+  try { lines = (await fsp.readFile(propsFile, 'utf8')).split(/\r?\n/); } catch {}
+  const set = (key, value) => {
+    const i = lines.findIndex((l) => l.startsWith(`${key}=`));
+    if (i === -1) lines.push(`${key}=${value}`);
+    else lines[i] = `${key}=${value}`;
+  };
+  set('shaderPack', shader);
+  set('enableShaders', 'true');
+
+  await fsp.mkdir(configDir, { recursive: true });
+  await fsp.writeFile(propsFile, `${lines.filter((l, i) => l || i < lines.length - 1).join('\n')}\n`);
+  await fsp.writeFile(marker, shader);
+  log?.info(`Shader par défaut activé : ${shader}`);
+}
+
+module.exports = { loadManifest, validateManifest, compareVersions, syncMods, syncShaders };
