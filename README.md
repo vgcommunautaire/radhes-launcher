@@ -56,7 +56,14 @@ npm install
 npm start
 ```
 
-### Mettre à jour la liste des mods
+### Le plus simple : les fichiers à double-cliquer
+- **Publier les mods.bat** : envoie la liste du dossier `mods/` à tous les joueurs.
+- **Publier le launcher.bat** : publie une nouvelle version du launcher (augmente d'abord `version` dans `package.json`).
+- **Changer la cle GitHub.bat** : à utiliser si ta clé GitHub expire.
+
+La première fois, ils demandent ta clé GitHub et la gardent chiffrée par Windows (seul ton compte peut la relire).
+
+### Mettre à jour la liste des mods (à la main)
 1. Mets les `.jar` dans le dossier `mods/` du projet (ajoute, remplace ou supprime).
 2. Si besoin, change la version de Minecraft dans `modpack.json`.
 3. Lance :
