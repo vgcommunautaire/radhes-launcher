@@ -15,10 +15,11 @@ function write(level, args) {
   const line = `[${new Date().toISOString()}] ${level} ${args
     .map((a) => (a instanceof Error ? a.stack || a.message : typeof a === 'string' ? a : JSON.stringify(a)))
     .join(' ')}\n`;
-  process.stdout.write(line);
   if (logFile) {
     try { fs.appendFileSync(logFile, line); } catch {}
   }
+  // Lancé depuis le bureau, le launcher n'a pas de console : écrire dessus peut échouer.
+  try { process.stdout.write(line); } catch {}
 }
 
 module.exports = {
